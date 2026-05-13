@@ -4,26 +4,18 @@ import hashlib
 import json
 import requests
 from flask import Flask, request, jsonify
-import google.generativeai as genai
-from google.generativeai import GenerationConfig
 
 app = Flask(__name__)
 
-# ── Configuration ─────────────────────────────────────────────────────────────
-GEMINI_API_KEY      = os.environ.get("GEMINI_API_KEY")
-PAGE_ACCESS_TOKEN   = os.environ.get("PAGE_ACCESS_TOKEN")
-APP_SECRET          = os.environ.get("APP_SECRET")
-VERIFY_TOKEN        = os.environ.get("VERIFY_TOKEN", "myanmar_souvenir_verify_2024")
+GEMINI_API_KEY    = os.environ.get("GEMINI_API_KEY")
+PAGE_ACCESS_TOKEN = os.environ.get("PAGE_ACCESS_TOKEN")
+APP_SECRET        = os.environ.get("APP_SECRET")
+VERIFY_TOKEN      = os.environ.get("VERIFY_TOKEN", "myanmar_souvenir_verify_2024")
 
-genai.configure(api_key=GEMINI_API_KEY)
-model = genai.GenerativeModel(model_name="gemini-1.5-flash")
-
-# ── Stock Knowledge Base ───────────────────────────────────────────────────────
 STOCK_DATA = """
 MYANMAR SOUVENIR SHOP — FULL STOCK LIST
 
 === ENAMEL TIFFIN CARRIERS ===
-
 Mohinga Single-Tier (14.5cm) — 58,000 MMK each:
 - Premium Blue: In Stock (15 pcs)
 - Forest Green: In Stock (14 pcs)
@@ -56,19 +48,13 @@ Classic 5-Tier (14cm) — 120,000 MMK each:
 - Mix Color: Low Stock (4-5 pcs)
 
 === BLIND BOX MYANMAR PALACE SERIES ===
-
 Size M (4 inches, Resin) — 77,000 MMK each — In Stock (100 pcs each):
-- 01 Queen Irra
-- 02 Tha Nak Khar Princess
-- 03 Innwa Warrior
-- 04 Poppa Zaw Gyi
-- 05 Yin Laung Heir
-- 06 Rangoon Prince
-- Secret 01 King
-- Secret 02 Phoe Wa
+- 01 Queen Irra, 02 Tha Nak Khar Princess, 03 Innwa Warrior
+- 04 Poppa Zaw Gyi, 05 Yin Laung Heir, 06 Rangoon Prince
+- Secret 01 King, Secret 02 Phoe Wa
 
 Size L (8 inches, Resin) — 250,000 MMK each — In Stock (10 pcs each):
-- Same 8 characters as Size M above
+- Same 8 characters as Size M
 
 === BLIND BOX SUPPORT CHARMS ===
 - 01 Owl (2cm): 5,000 MMK — In Stock (500 pcs)
@@ -90,7 +76,7 @@ Size L (8 inches, Resin) — 250,000 MMK each — In Stock (10 pcs each):
 - Wooden Soap Plate: 15,000 MMK — In Stock
 - Wooden Visiting Card Holder: 15,000 MMK — In Stock
 - Wooden Clock Violin Style: 65,000 MMK — In Stock
-- Prayer Book Stand (Kokko): 50,000–110,000 MMK — In Stock
+- Prayer Book Stand (Kokko): 50,000-110,000 MMK — In Stock
 - Wooden Display Stand Circle/Square: 60,000 MMK each
 
 === WOODEN JEWEL CASES ===
@@ -98,12 +84,12 @@ Size L (8 inches, Resin) — 250,000 MMK each — In Stock (10 pcs each):
 - Square Double Window Mahogany Jewel Case (Small): 15,000 MMK — In Stock (10 pcs)
 - Heart Mahogany Jewel Case (Small): 15,000 MMK — In Stock (10 pcs)
 - Heart Double Boxes Mahogany Jewel Case: 10,000 MMK — In Stock (10 pcs)
-- Luxury Kokko Jewel Chest Drawer (Size L): 120,000 MMK — In Stock (15 pcs)
-- Luxury Padauk Jewel Chest Drawer (Size M): 110,000 MMK — Low Stock (2 pcs)
-- Luxury Padauk Jewel Chest Drawer (Size S): 100,000 MMK — Low Stock (2 pcs)
+- Luxury Kokko Jewel Chest Drawer (L): 120,000 MMK — In Stock (15 pcs)
+- Luxury Padauk Jewel Chest Drawer (M): 110,000 MMK — Low Stock (2 pcs)
+- Luxury Padauk Jewel Chest Drawer (S): 100,000 MMK — Low Stock (2 pcs)
 
 === BAMBOO PACKAGING ===
-- Luxury Bamboo Box Rectangle (L, 12x10x7cm): 45,000 MMK — In Stock (10 pcs)
+- Luxury Bamboo Box Rectangle (L): 45,000 MMK — In Stock (10 pcs)
 - Bamboo Box Rectangle (M): 7,500 MMK — In Stock (10 pcs)
 - Bamboo Basket Style (L): 6,000 MMK — Low Stock (3 pcs)
 - Bamboo Basket Style (S): 4,500 MMK — Low Stock (3 pcs)
@@ -115,14 +101,14 @@ Size L (8 inches, Resin) — 250,000 MMK each — In Stock (10 pcs each):
 - Enamel Short Spoon: 6,500 MMK — In Stock (100+ pcs)
 - Enamel Budget Plate: 6,500 MMK — In Stock (20 pcs)
 - Enamel Hi Tea Set (Kettle + Big Plate + 2 Teacups): 75,000 MMK — In Stock
-- Enamel Lat Phet Bowl with Handle+Cover (S): 28,000 MMK — In Stock
-- Enamel Lat Phet Bowl with Handle+Cover (M): 35,000 MMK — In Stock
-- Enamel Curry Bowl with Handle+Cover (M): 48,000 MMK — In Stock
-- Enamel Rice Bowl with Handle+Cover: 65,000 MMK — In Stock
-- Enamel Budget Noodle Shop Bowl (13cm): 15,000–18,000 MMK — In Stock
+- Enamel Lat Phet Bowl S: 28,000 MMK — In Stock
+- Enamel Lat Phet Bowl M: 35,000 MMK — In Stock
+- Enamel Curry Bowl M: 48,000 MMK — In Stock
+- Enamel Rice Bowl: 65,000 MMK — In Stock
+- Enamel Budget Noodle Shop Bowl (13cm): 15,000-18,000 MMK — In Stock
 - Budget Enamel Steel Handcarry 2-Tier: 38,000 MMK — In Stock
 - Budget Enamel Mug with Cover: 35,000 MMK — In Stock
-- Budget Enamel Mug with Plate: 10,000–18,000 MMK — In Stock
+- Budget Enamel Mug with Plate: 10,000-18,000 MMK — In Stock
 - Budget Giant Enamel Mug with Cover: 18,000 MMK — In Stock
 - Budget 90s Enamel Mug with Cover: 18,000 MMK — In Stock
 
@@ -140,87 +126,73 @@ Size L (8 inches, Resin) — 250,000 MMK each — In Stock (10 pcs each):
 """
 
 SYSTEM_PROMPT = f"""You are a helpful and friendly customer service assistant for a Myanmar souvenir shop.
-Your job is to answer customer questions about products, prices, colors, stock availability, and anything related to the shop.
+Answer customer questions about products, prices, colors, and stock availability.
 
-IMPORTANT LANGUAGE RULE:
-- If the customer writes in Burmese (Myanmar language), you MUST reply in Burmese.
-- If the customer writes in English, reply in English.
-- If they mix both languages, reply in Burmese.
+LANGUAGE RULE:
+- Customer writes in Burmese → reply in Burmese
+- Customer writes in English → reply in English
+- Mixed languages → reply in Burmese
 
-Here is the complete stock information for the shop:
-
+STOCK DATA:
 {STOCK_DATA}
 
-Guidelines:
-- Be warm, friendly and helpful like a real shop assistant
-- If a product is Low Stock, mention it politely and suggest they order soon
-- If asked about something not in the stock list, say you don't have it currently
-- Always mention the price when talking about a product
-- Keep replies short and easy to read on a phone screen
-- Use line breaks to make lists readable
-- Never make up products or prices not in the list above
+Rules:
+- Be warm and friendly
+- Mention Low Stock items politely, suggest ordering soon
+- Always include price when discussing products
+- Keep replies short and phone-friendly
+- Never invent products or prices not listed above
+- If item not in list, say it is not available currently
 """
 
-# ── Gemini AI Response ─────────────────────────────────────────────────────────
 def get_ai_response(user_message):
     try:
-        full_prompt = SYSTEM_PROMPT + f"\n\nCustomer message: {user_message}"
-        response = model.generate_content(full_prompt)
-        return response.text
-    except Exception as e:
-        print(f"Gemini error: {e}")
-        return "မင်္ဂလာပါ! Sorry, I'm having a little trouble right now. Please try again in a moment. 🙏"
-
-# ── Send message back to Messenger ────────────────────────────────────────────
-def send_message(recipient_id, message_text):
-    # Split long messages (Messenger limit is 2000 chars)
-    chunks = [message_text[i:i+1900] for i in range(0, len(message_text), 1900)]
-    for chunk in chunks:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
         payload = {
-            "recipient": {"id": recipient_id},
-            "message": {"text": chunk}
+            "contents": [{"parts": [{"text": SYSTEM_PROMPT + "\n\nCustomer: " + user_message}]}],
+            "generationConfig": {"temperature": 0.7, "maxOutputTokens": 800}
         }
+        r = requests.post(url, json=payload, timeout=30)
+        data = r.json()
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+    except Exception as e:
+        print(f"Error: {e}")
+        return "မင်္ဂလာပါ! Sorry, please try again in a moment."
+
+def send_message(recipient_id, text):
+    for chunk in [text[i:i+1900] for i in range(0, len(text), 1900)]:
         requests.post(
             f"https://graph.facebook.com/v18.0/me/messages?access_token={PAGE_ACCESS_TOKEN}",
-            json=payload
+            json={"recipient": {"id": recipient_id}, "message": {"text": chunk}},
+            timeout=10
         )
 
-# ── Webhook verification (Facebook requires this) ─────────────────────────────
 @app.route("/webhook", methods=["GET"])
-def verify_webhook():
-    token = request.args.get("hub.verify_token")
-    challenge = request.args.get("hub.challenge")
-    if token == VERIFY_TOKEN:
-        return challenge, 200
-    return "Verification failed", 403
+def verify():
+    if request.args.get("hub.verify_token") == VERIFY_TOKEN:
+        return request.args.get("hub.challenge"), 200
+    return "Failed", 403
 
-# ── Receive messages from Messenger ───────────────────────────────────────────
 @app.route("/webhook", methods=["POST"])
-def receive_message():
-    # Verify the request is from Facebook
-    signature = request.headers.get("X-Hub-Signature-256", "")
+def webhook():
+    sig = request.headers.get("X-Hub-Signature-256", "")
     body = request.get_data()
     expected = "sha256=" + hmac.new(APP_SECRET.encode(), body, hashlib.sha256).hexdigest()
-    if not hmac.compare_digest(signature, expected):
-        return "Invalid signature", 403
-
+    if not hmac.compare_digest(sig, expected):
+        return "Bad signature", 403
     data = request.json
     if data.get("object") == "page":
         for entry in data.get("entry", []):
             for event in entry.get("messaging", []):
                 sender_id = event["sender"]["id"]
                 if "message" in event and "text" in event["message"]:
-                    user_text = event["message"]["text"]
-                    print(f"Message from {sender_id}: {user_text}")
-                    ai_reply = get_ai_response(user_text)
-                    send_message(sender_id, ai_reply)
+                    reply = get_ai_response(event["message"]["text"])
+                    send_message(sender_id, reply)
     return jsonify({"status": "ok"}), 200
 
-# ── Health check ───────────────────────────────────────────────────────────────
 @app.route("/")
 def home():
     return "Myanmar Souvenir Bot is running! 🇲🇲"
 
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
