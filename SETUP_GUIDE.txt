@@ -1,0 +1,74 @@
+# Myanmar Souvenir Bot — Setup Guide
+# =====================================
+# Follow every step carefully. No coding needed!
+
+## WHAT YOU HAVE
+- app.py          → the bot brain (AI + stock data + Messenger logic)
+- requirements.txt → list of tools Python needs
+- Procfile         → tells Render how to start your bot
+
+## STEP 1 — Upload code to GitHub (free)
+1. Go to github.com → Sign up free
+2. Click "New repository"
+3. Name it: myanmar-souvenir-bot
+4. Click "Create repository"
+5. Click "uploading an existing file"
+6. Upload all 3 files: app.py, requirements.txt, Procfile
+7. Click "Commit changes"
+
+## STEP 2 — Deploy on Render (free hosting)
+1. Go to render.com → Sign up with GitHub
+2. Click "New +" → "Web Service"
+3. Connect your GitHub repo: myanmar-souvenir-bot
+4. Settings:
+   - Name: myanmar-souvenir-bot
+   - Runtime: Python 3
+   - Build Command: pip install -r requirements.txt
+   - Start Command: gunicorn app:app
+   - Plan: FREE
+5. Click "Advanced" → "Add Environment Variable" — add these one by one:
+
+   Key: GEMINI_API_KEY
+   Value: (paste your Gemini API key here)
+
+   Key: PAGE_ACCESS_TOKEN
+   Value: (paste your Facebook Page Access Token here)
+
+   Key: APP_SECRET
+   Value: (paste your Facebook App Secret here)
+
+   Key: VERIFY_TOKEN
+   Value: myanmar_souvenir_verify_2024
+
+6. Click "Create Web Service"
+7. Wait 2-3 minutes for it to deploy
+8. You will get a URL like: https://myanmar-souvenir-bot.onrender.com
+   → SAVE THIS URL!
+
+## STEP 3 — Connect to Facebook Messenger
+1. Go to developers.facebook.com → your app
+2. Click "Messenger" → "Settings"
+3. Scroll to "Webhooks" → Click "Add Callback URL"
+4. Callback URL: https://myanmar-souvenir-bot.onrender.com/webhook
+5. Verify Token: myanmar_souvenir_verify_2024
+6. Click "Verify and Save"
+7. Under "Webhooks", click "Add Subscriptions"
+8. Check these boxes:
+   ✅ messages
+   ✅ messaging_postbacks
+9. Click "Save"
+
+## STEP 4 — Make your app public
+1. In your Facebook app → "App Review" → "Permissions and Features"
+2. Request permission for "pages_messaging"
+3. Go to "Settings" → "Basic" → change Status to "Live"
+
+## YOU'RE DONE! 🎉
+Customers can now message your Facebook Page and the AI will reply
+automatically in Burmese or English based on your stock data!
+
+## TROUBLESHOOTING
+- Bot not replying? Check your environment variables on Render are correct
+- Render goes to sleep after 15 mins of inactivity on free plan
+  (first message may take 30 seconds to wake up — this is normal)
+- To keep it always awake: use uptimerobot.com (free) to ping your URL every 10 mins
